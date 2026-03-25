@@ -3,358 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Circular Clock Pro - Alarms & UI</title>
-
+  <title>Mohamed Bakry Pro Clock</title>
   <style>
-    /* =========================================
-       Base Layout & Clock Design
-       ========================================= */
     body {
-      margin: 0; padding: 0;
-      background-color: #0a0a0a;
-      color: #fff;
+      margin: 0; padding: 0; background-color: #0a0a0a; color: #fff;
       display: flex; justify-content: center; align-items: center;
-      height: 100vh; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      overflow: hidden;
+      height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden;
     }
-
     .clock-container { position: relative; width: 100vmin; height: 100vmin; }
 
+    /* الحلقات - النصوص بيضاء دائمًا */
     .ring-wrapper {
-      position: absolute; top: 50%; left: 50%;
-      border-radius: 50%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-      pointer-events: none;
+      position: absolute; top: 50%; left: 50%; border-radius: 50%;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none;
     }
-
-    .progress-ring {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%; transform: rotate(-90deg);
-      overflow: visible; z-index: 1;
-    }
-
+    .progress-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; z-index: 1; }
     .items { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
-
     .ring-item {
-      position: absolute; width: 12vmin; height: 50%;
-      top: 0; left: 50%; margin-left: -6vmin;
-      transform-origin: 50% 100%; display: flex;
-      justify-content: center; align-items: flex-start;
-      font-weight: 700; transition: text-shadow 0.3s, opacity 0.3s;
+      position: absolute; width: 12vmin; height: 50%; top: 0; left: 50%; margin-left: -6vmin;
+      transform-origin: 50% 100%; display: flex; justify-content: center; align-items: flex-start;
     }
+    .ring-item span { color: #ffffff !important; white-space: nowrap; font-weight: 700; transition: all 0.3s; }
 
     .track { fill: transparent; stroke: #1a1a1a; stroke-width: 5; }
     .progress { fill: transparent; stroke-width: 5; transition: stroke 0.3s; }
 
     #ring-date { width: 85vmin; height: 85vmin; z-index: 10; }
-    #ring-month { width: 68vmin; height: 68vmin; z-index: 20; }
-    #ring-day { width: 51vmin; height: 51vmin; z-index: 30; }
+    #ring-month { width: 70vmin; height: 70vmin; z-index: 20; }
+    #ring-day { width: 55vmin; height: 55vmin; z-index: 30; }
+    #ring-date .ring-item { font-size: 2.2vmin; padding-top: 1.8vmin; }
+    #ring-month .ring-item { font-size: 2vmin; padding-top: 1.2vmin; }
+    #ring-day .ring-item { font-size: 1.8vmin; padding-top: 0.8vmin; }
 
-    /* =========================================
-       Analog Clock & Numbers
-       ========================================= */
+    /* الساعة التناظرية والأرقام */
     .analog-clock {
-      position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 32vmin; height: 32vmin;
-      border-radius: 50%; background: #141414;
-      box-shadow: inset 0 0 20px #000, 0 0 15px rgba(0,0,0,0.5);
-      z-index: 40;
-    }
-
-    /* أرقام الساعة 1-12 */
-    .clock-numbers {
-      position: absolute; width: 100%; height: 100%;
-      top: 0; left: 0; pointer-events: none;
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 35vmin; height: 35vmin; border-radius: 50%; background: #111;
+      box-shadow: inset 0 0 20px #000; z-index: 40;
     }
     .num {
-      position: absolute; width: 100%; height: 100%;
-      text-align: center; font-size: 2.5vmin; font-weight: bold;
-      color: #888; padding-top: 1.5vmin; box-sizing: border-box;
+      position: absolute; width: 100%; height: 100%; text-align: center;
+      font-size: 2.8vmin; font-weight: bold; color: #555; padding-top: 1.5vmin; box-sizing: border-box;
     }
+    .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: 50% 100%; border-radius: 5vmin; background: #fff; }
+    .hour-hand { width: 1.2vmin; height: 8.5vmin; margin-left: -0.6vmin; }
+    .minute-hand { width: 0.8vmin; height: 13vmin; margin-left: -0.4vmin; }
+    .second-hand { width: 0.3vmin; height: 15vmin; margin-left: -0.15vmin; background: #ff2a2a; }
+    .ampm { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%); font-size: 2.2vmin; color: #444; font-weight: bold; }
 
-    .hand {
-      position: absolute; bottom: 50%; left: 50%;
-      transform-origin: 50% 100%; border-radius: 5vmin;
-      background: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    /* المنبه Popup */
+    .alarm-popup {
+      position: fixed; top: 10%; left: 50%; transform: translateX(-50%);
+      background: #ff2a2a; color: white; padding: 20px 40px; border-radius: 50px;
+      z-index: 1000; display: none; text-align: center; box-shadow: 0 0 30px #ff2a2a;
+      animation: alert 1s infinite;
     }
-    .hour-hand { width: 1.2vmin; height: 8vmin; margin-left: -0.6vmin; background: #eee; }
-    .minute-hand { width: 0.8vmin; height: 12vmin; margin-left: -0.4vmin; }
-    .second-hand { width: 0.3vmin; height: 14vmin; margin-left: -0.15vmin; background: #ff2a2a; }
+    @keyframes alert { 0%, 100% { scale: 1; } 50% { scale: 1.1; } }
+    .alarm-btn { margin: 10px 5px 0; padding: 8px 15px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
 
-    .ampm-display {
-      position: absolute; bottom: 25%; left: 50%;
-      transform: translateX(-50%); font-size: 2vmin;
-      color: #444; font-weight: bold; letter-spacing: 1px;
-    }
-
-    .center-dot {
-      position: absolute; top: 50%; left: 50%;
-      width: 2vmin; height: 2vmin; margin: -1vmin 0 0 -1vmin;
-      background: #fff; border-radius: 50%; z-index: 50;
-    }
-
-    /* =========================================
-       Alarm UI
-       ========================================= */
-    .alarm-notice {
-      position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
-      background: #ff2a2a; color: white; padding: 20px 40px;
-      border-radius: 50px; font-weight: bold; z-index: 1000;
-      display: none; box-shadow: 0 0 30px #ff2a2a; animation: pulse 1s infinite;
-      text-align: center;
-    }
-    @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.05; } 100% { scale: 1; } }
-
-    .snooze-btn {
-      margin-top: 10px; padding: 8px 20px; border: none;
-      background: white; color: #ff2a2a; border-radius: 20px;
-      cursor: pointer; font-weight: bold;
-    }
-
-    /* Settings & Inputs */
-    .settings-btn {
-      position: absolute; top: 4vmin; right: 4vmin;
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-      color: #fff; font-size: 3.5vmin; width: 8vmin; height: 8vmin;
-      border-radius: 50%; cursor: pointer; z-index: 100;
-      display: flex; justify-content: center; align-items: center;
-    }
-
+    /* الإعدادات */
+    .settings-btn { position: absolute; top: 4vmin; right: 4vmin; font-size: 5vmin; cursor: pointer; z-index: 100; opacity: 0.5; transition: 0.3s; }
+    .settings-btn:hover { opacity: 1; }
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-      display: none; justify-content: center; align-items: center; z-index: 200;
+      background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 200;
     }
     .modal-overlay.active { display: flex; }
-
-    .modal {
-      background: #111; border: 1px solid #333; border-radius: 20px;
-      width: 90vw; max-width: 450px; padding: 25px; max-height: 80vh; overflow-y: auto;
-    }
-
-    .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .neon-input { background: #000; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 5px; outline: none; }
-    .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
-    .btn-apply { background: #2a7fff; color: white; width: 100%; margin-top: 10px; }
-    
-    .alarm-list-item {
-      background: #1a1a1a; padding: 10px; border-radius: 8px;
-      margin-bottom: 5px; display: flex; justify-content: space-between; font-size: 0.9rem;
-    }
-    .delete-alarm { color: #ff2a2a; cursor: pointer; }
-
+    .modal { background: #181818; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
+    .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .input-field { background: #000; border: 1px solid #333; color: #fff; padding: 8px; border-radius: 5px; width: 60%; }
+    .btn-save { background: #2a7fff; color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <div class="alarm-notice" id="alarm-notice">
-    <div>⏰ المنبه يرررن!</div>
-    <button class="snooze-btn" onclick="snoozeAlarm()">غفوة (5 دقائق)</button>
-    <button class="snooze-btn" style="background:transparent; color:white; border:1px solid white;" onclick="stopAlarm()">إيقاف</button>
+  <div class="alarm-popup" id="alarm-popup">
+    <div>⏰ Alarm is Ringing!</div>
+    <button class="alarm-btn" onclick="snoozeAlarm()" style="background: white; color: #ff2a2a;">Snooze (5m)</button>
+    <button class="alarm-btn" onclick="stopAlarm()" style="background: transparent; border: 1px solid white; color: white;">Stop</button>
   </div>
 
-  <button id="settings-btn" class="settings-btn">⚙️</button>
+  <div class="settings-btn" onclick="toggleModal()">⚙️</div>
 
-  <div class="modal-overlay" id="modal-overlay">
+  <div class="modal-overlay" id="modal">
     <div class="modal">
-      <h2 style="margin-top:0; color:#2a7fff;">Settings & Alarms</h2>
-      
-      <div class="setting-row">
-        <span>Manual Mode</span>
-        <input type="checkbox" id="mode-toggle">
+      <h2 style="margin-top:0">Settings</h2>
+      <div class="row"><span>Date Ring Color</span><input type="color" id="color-date" value="#ff2a2a"></div>
+      <div class="row"><span>Month Ring Color</span><input type="color" id="color-month" value="#ffffff"></div>
+      <div class="row"><span>Day Ring Color</span><input type="color" id="color-day" value="#ffffff"></div>
+      <div class="row">
+        <span>Alarm Sound</span>
+        <select id="sound-select" class="input-field">
+          <option value="alarm.mp3">Custom (alarm.mp3)</option>
+          <option value="https://actions.google.com/sounds/v1/alarms/alarm_clock_beep.ogg">Beep</option>
+          <option value="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg">Digital</option>
+        </select>
       </div>
-      <div class="setting-row">
-        <span>Date/Time</span>
-        <input type="datetime-local" id="custom-datetime" class="neon-input">
-      </div>
-
-      <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
-
-      <h3 style="font-size:1rem; color:#aaa;">Add New Alarm</h3>
-      <div class="setting-row">
-        <input type="datetime-local" id="new-alarm-time" class="neon-input" style="width:70%">
-        <button class="btn" onclick="addAlarm()" style="background:#27ae60; color:white;">+</button>
-      </div>
-
+      <hr style="border:0; border-top:1px solid #333;">
+      <h3>Add Alarm</h3>
+      <div class="row"><input type="datetime-local" id="alarm-time" class="input-field"><button onclick="addAlarm()" style="padding:8px; cursor:pointer;">Add</button></div>
       <div id="alarm-list"></div>
-
-      <button class="btn btn-apply" id="apply-btn">Save Changes</button>
-      <button class="btn" onclick="document.getElementById('modal-overlay').classList.remove('active')" style="width:100%; margin-top:5px; background:#333; color:white;">Close</button>
+      <button class="btn-save" onclick="saveSettings()">Save & Close</button>
     </div>
   </div>
 
   <div class="clock-container">
-    <div class="ring-wrapper" id="ring-date">
-      <svg class="progress-ring" viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="47"></circle><circle class="progress" cx="50" cy="50" r="47"></circle></svg>
-      <div class="items"></div>
-    </div>
-    <div class="ring-wrapper" id="ring-month">
-      <svg class="progress-ring" viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="47"></circle><circle class="progress" cx="50" cy="50" r="47"></circle></svg>
-      <div class="items"></div>
-    </div>
-    <div class="ring-wrapper" id="ring-day">
-      <svg class="progress-ring" viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="47"></circle><circle class="progress" cx="50" cy="50" r="47"></circle></svg>
-      <div class="items"></div>
-    </div>
+    <div class="ring-wrapper" id="ring-date"><svg class="progress-ring" viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="47"></circle><circle class="progress" cx="50" cy="50" r="47"></circle></svg><div class="items"></div></div>
+    <div class="ring-wrapper" id="ring-month"><svg class="progress-ring" viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="47"></circle><circle class="progress" cx="50" cy="50" r="47"></circle></svg><div class="items"></div></div>
+    <div class="ring-wrapper" id="ring-day"><svg class="progress-ring" viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="47"></circle><circle class="progress" cx="50" cy="50" r="47"></circle></svg><div class="items"></div></div>
 
     <div class="analog-clock">
-      <div class="clock-numbers" id="clock-numbers"></div>
-      <div class="ampm-display" id="ampm-text">AM</div>
-      <div class="hand hour-hand" id="hour"></div>
-      <div class="hand minute-hand" id="minute"></div>
-      <div class="hand second-hand" id="second"></div>
-      <div class="center-dot"></div>
+      <div id="numbers"></div>
+      <div class="ampm" id="ampm">AM</div>
+      <div class="hand hour-hand" id="h-hand"></div>
+      <div class="hand minute-hand" id="m-hand"></div>
+      <div class="hand second-hand" id="s-hand"></div>
+      <div style="position:absolute; top:50%; left:50%; width:2vmin; height:2vmin; background:#fff; border-radius:50%; transform:translate(-50%,-50%); z-index:50;"></div>
     </div>
   </div>
 
-  <audio id="alarm-sound" src="alarm.mp3" loop></audio>
+  <audio id="audio" loop></audio>
 
   <script>
-    let isCustom = false;
-    let customTime = new Date();
-    let alarms = JSON.parse(localStorage.getItem('alarms') || '[]');
-    const alarmSound = document.getElementById('alarm-sound');
-    
-    // إعداد أرقام الساعة 1-12
-    const numbersContainer = document.getElementById('clock-numbers');
-    for(let i=1; i<=12; i++) {
-      const num = document.createElement('div');
-      num.className = 'num';
-      num.textContent = i;
-      num.style.transform = `rotate(${i * 30}deg)`;
-      numbersContainer.appendChild(num);
-    }
-
-    // فتح الإعدادات
-    document.getElementById('settings-btn').onclick = () => {
-      document.getElementById('modal-overlay').classList.add('active');
-      renderAlarms();
+    let config = {
+      dateColor: localStorage.getItem('dC') || '#ff2a2a',
+      monthColor: localStorage.getItem('mC') || '#ffffff',
+      dayColor: localStorage.getItem('dyC') || '#ffffff',
+      sound: localStorage.getItem('snd') || 'alarm.mp3',
+      alarms: JSON.parse(localStorage.getItem('alrms') || '[]')
     };
 
+    // توليد الأرقام 1-12
+    const numBox = document.getElementById('numbers');
+    for(let i=1; i<=12; i++){
+      const el = document.createElement('div');
+      el.className = 'num'; el.textContent = i;
+      el.style.transform = `rotate(${i*30}deg)`;
+      numBox.appendChild(el);
+    }
+
+    function toggleModal() { 
+      document.getElementById('modal').classList.toggle('active'); 
+      renderAlarms(); 
+    }
+
+    function saveSettings() {
+      config.dateColor = document.getElementById('color-date').value;
+      config.monthColor = document.getElementById('color-month').value;
+      config.dayColor = document.getElementById('color-day').value;
+      config.sound = document.getElementById('sound-select').value;
+      localStorage.setItem('dC', config.dateColor);
+      localStorage.setItem('mC', config.monthColor);
+      localStorage.setItem('dyC', config.dayColor);
+      localStorage.setItem('snd', config.sound);
+      toggleModal();
+    }
+
     function addAlarm() {
-      const timeVal = document.getElementById('new-alarm-time').value;
-      if(timeVal) {
-        alarms.push({ id: Date.now(), time: timeVal, active: true });
-        localStorage.setItem('alarms', JSON.stringify(alarms));
+      const time = document.getElementById('alarm-time').value;
+      if(time) {
+        config.alarms.push({ id: Date.now(), time, active: true });
+        localStorage.setItem('alrms', JSON.stringify(config.alarms));
         renderAlarms();
       }
     }
 
-    function deleteAlarm(id) {
-      alarms = alarms.filter(a => a.id !== id);
-      localStorage.setItem('alarms', JSON.stringify(alarms));
+    function removeAlarm(id) {
+      config.alarms = config.alarms.filter(a => a.id !== id);
+      localStorage.setItem('alrms', JSON.stringify(config.alarms));
       renderAlarms();
     }
 
     function renderAlarms() {
       const list = document.getElementById('alarm-list');
-      list.innerHTML = alarms.map(a => `
-        <div class="alarm-list-item">
-          <span>${a.time.replace('T', ' ')}</span>
-          <span class="delete-alarm" onclick="deleteAlarm(${a.id})">🗑️</span>
+      list.innerHTML = config.alarms.map(a => `
+        <div class="row" style="background:#222; padding:5px; border-radius:5px; margin-top:5px;">
+          <span style="font-size:12px;">${a.time.replace('T',' ')}</span>
+          <button onclick="removeAlarm(${a.id})" style="color:red; background:none; border:none; cursor:pointer;">X</button>
         </div>
       `).join('');
     }
 
-    // تحديث الحلقات (التاريخ، الشهر، اليوم)
-    function setRing(id, items, currentIndex, accentColor) {
-      const wrapper = document.getElementById(id);
-      const itemsContainer = wrapper.querySelector('.items');
-      const svgCircle = wrapper.querySelector('.progress');
-      
-      if (itemsContainer.children.length !== items.length) {
-        itemsContainer.innerHTML = '';
-        items.forEach((item, i) => {
-          const el = document.createElement('div');
-          el.className = 'ring-item';
-          el.innerHTML = `<span>${item}</span>`;
-          el.style.transform = `rotate(${i * (360 / items.length)}deg)`;
-          itemsContainer.appendChild(el);
-        });
+    function setRing(id, items, current, color) {
+      const wrap = document.getElementById(id);
+      const cont = wrap.querySelector('.items');
+      if (cont.children.length !== items.length) {
+        cont.innerHTML = items.map((t, i) => `<div class="ring-item" style="transform:rotate(${i*(360/items.length)}deg)"><span>${t}</span></div>`).join('');
       }
-      
-      Array.from(itemsContainer.children).forEach((el, i) => {
-        el.style.opacity = i === currentIndex ? '1' : '0.3';
-        el.style.textShadow = i === currentIndex ? `0 0 10px ${accentColor}` : 'none';
-        el.style.color = i === currentIndex ? accentColor : '#fff';
+      Array.from(cont.children).forEach((el, i) => {
+        const span = el.querySelector('span');
+        if(i === current) {
+          el.style.opacity = '1';
+          span.style.textShadow = `0 0 15px ${color}, 0 0 25px ${color}`;
+        } else {
+          el.style.opacity = '0.3'; span.style.textShadow = 'none';
+        }
       });
-
-      const angle = currentIndex * (360 / items.length);
-      wrapper.style.transform = `translate(-50%, -50%) rotate(-${angle}deg)`;
-      svgCircle.style.stroke = accentColor;
+      wrap.style.transform = `translate(-50%,-50%) rotate(-${current*(360/items.length)}deg)`;
+      wrap.querySelector('.progress').style.stroke = color;
     }
 
-    function updateClock() {
-      const now = isCustom ? customTime : new Date();
+    function update() {
+      const now = new Date();
+      const s = now.getSeconds(), m = now.getMinutes(), h = now.getHours();
       
-      // التناظري
-      const s = now.getSeconds();
-      const m = now.getMinutes();
-      const h = now.getHours();
-      
-      document.getElementById('second').style.transform = `rotate(${s * 6}deg)`;
-      document.getElementById('minute').style.transform = `rotate(${m * 6 + s/10}deg)`;
-      document.getElementById('hour').style.transform = `rotate(${(h % 12) * 30 + m/2}deg)`;
-      document.getElementById('ampm-text').textContent = h >= 12 ? 'PM' : 'AM';
+      document.getElementById('s-hand').style.transform = `rotate(${s*6}deg)`;
+      document.getElementById('m-hand').style.transform = `rotate(${m*6}deg)`;
+      document.getElementById('h-hand').style.transform = `rotate(${(h%12)*30 + m/2}deg)`;
+      document.getElementById('ampm').textContent = h >= 12 ? 'PM' : 'AM';
 
-      // الحلقات
       const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
       const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const dates = Array.from({length: daysInMonth}, (_, i) => String(i+1).padStart(2, '0'));
+      const dates = Array.from({length: new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()}, (_,i)=>String(i+1).padStart(2,'0'));
 
-      setRing('ring-date', dates, now.getDate() - 1, '#ff2a2a');
-      setRing('ring-month', months, now.getMonth(), '#ffffff');
-      setRing('ring-day', days, now.getDay(), '#ffffff');
+      setRing('ring-date', dates, now.getDate()-1, config.dateColor);
+      setRing('ring-month', months, now.getMonth(), config.monthColor);
+      setRing('ring-day', days, now.getDay(), config.dayColor);
 
-      // فحص المنبهات
-      checkAlarms(now);
-    }
-
-    function checkAlarms(now) {
-      const nowStr = now.toISOString().slice(0, 16); // format: YYYY-MM-DDTHH:mm
-      alarms.forEach(alarm => {
-        if(alarm.active && alarm.time === nowStr) {
-          triggerAlarm(alarm.id);
+      const checkTime = now.toISOString().slice(0,16);
+      config.alarms.forEach(a => {
+        if(a.active && a.time === checkTime) {
+          a.active = false;
+          localStorage.setItem('alrms', JSON.stringify(config.alarms));
+          startAlarm();
         }
       });
     }
 
-    function triggerAlarm(id) {
-      alarmSound.play();
-      document.getElementById('alarm-notice').style.display = 'block';
-      // تعطيل المنبه بعد رنينه
-      alarms = alarms.map(a => a.id === id ? {...a, active: false} : a);
+    function startAlarm() {
+      const audio = document.getElementById('audio');
+      audio.src = config.sound;
+      audio.play().catch(() => console.log("Interaction needed"));
+      document.getElementById('alarm-popup').style.display = 'block';
     }
 
-    window.stopAlarm = function() {
-      alarmSound.pause();
-      alarmSound.currentTime = 0;
-      document.getElementById('alarm-notice').style.display = 'none';
+    window.stopAlarm = () => {
+      const audio = document.getElementById('audio');
+      audio.pause(); audio.currentTime = 0;
+      document.getElementById('alarm-popup').style.display = 'none';
     };
 
-    window.snoozeAlarm = function() {
+    window.snoozeAlarm = () => {
       stopAlarm();
-      const snoozeTime = new Date(Date.now() + 5 * 60000);
-      const snoozeStr = new Date(snoozeTime.getTime() - snoozeTime.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-      alarms.push({ id: Date.now(), time: snoozeStr, active: true });
-      localStorage.setItem('alarms', JSON.stringify(alarms));
+      const snooze = new Date(Date.now() + 5 * 60000);
+      const offset = snooze.getTimezoneOffset() * 60000;
+      const timeStr = new Date(snooze.getTime() - offset).toISOString().slice(0,16);
+      config.alarms.push({ id: Date.now(), time: timeStr, active: true });
+      localStorage.setItem('alrms', JSON.stringify(config.alarms));
     };
 
-    document.getElementById('apply-btn').onclick = () => {
-      isCustom = document.getElementById('mode-toggle').checked;
-      if(isCustom) {
-        customTime = new Date(document.getElementById('custom-datetime').value);
-      }
-      document.getElementById('modal-overlay').classList.remove('active');
-    };
-
-    setInterval(() => {
-      if(isCustom) customTime.setSeconds(customTime.getSeconds() + 1);
-      updateClock();
-    }, 1000);
-
-    updateClock();
+    setInterval(update, 1000);
+    update();
   </script>
 </body>
 </html>
