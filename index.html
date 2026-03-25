@@ -3,687 +3,251 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Circular Digital Clock - Enhanced Visibility</title>
-
+  <title>Smart Clock - Snooze & Custom Tones</title>
   <link rel="manifest" href="manifest.json">
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("Service Worker Registered Successfully"))
-        .catch(err => console.log("Service Worker Failed", err));
+      navigator.serviceWorker.register('sw.js');
     }
   </script>
 
   <style>
-    /* =========================================
-       Base Layout & Clock Design
-       ========================================= */
+    :root {
+      --vanilla-latte: #f3e5ab;
+      --accent-blue: #2a7fff;
+    }
+
     body {
-      margin: 0;
-      padding: 0;
-      background-color: #111;
+      margin: 0; padding: 0;
+      background-color: #0a0a0a;
       color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      font-family: 'Courier New', Courier, monospace;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; font-family: 'Segoe UI', sans-serif;
       overflow: hidden;
     }
 
-    .clock-container {
-      position: relative;
-      width: 100vmin;
-      height: 100vmin;
+    .clock-container { position: relative; width: 100vmin; height: 100vmin; }
+
+    /* أرقام الساعة */
+    .clock-numbers {
+      position: absolute; top: 50%; left: 50%;
+      width: 28vmin; height: 28vmin;
+      transform: translate(-50%, -50%); z-index: 45;
     }
 
-    .ring-wrapper {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      border-radius: 50%;
-      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-      pointer-events: none;
+    .hour-num {
+      position: absolute; width: 100%; height: 100%;
+      text-align: center; font-weight: bold; font-size: 2.5vmin;
+      color: rgba(255,255,255,0.6);
     }
 
-    .progress-ring {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      transform: rotate(-90deg);
-      overflow: visible;
-      z-index: 1;
-    }
-
-    .items {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 5;
-    }
-
-    .ring-item {
-      position: absolute;
-      width: 12vmin;
-      height: 50%;
-      top: 0;
-      left: 50%;
-      margin-left: -6vmin;
-      transform-origin: 50% 100%;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      font-weight: 700;
-      box-sizing: border-box;
-      transition: text-shadow 0.3s, opacity 0.3s;
-    }
-
-    .track {
-      fill: transparent;
-      stroke: #1a1a1a;
-      stroke-width: 5;
-    }
-
-    .progress {
-      fill: transparent;
-      stroke-width: 5;
-      transition: stroke 0.3s;
-    }
-
-    #ring-date { width: 85vmin; height: 85vmin; z-index: 10; }
-    #ring-month { width: 68vmin; height: 68vmin; z-index: 20; }
-    #ring-day { width: 51vmin; height: 51vmin; z-index: 30; }
-
-    #ring-date .ring-item { font-size: 2.2vmin; padding-top: 1.8vmin; }
-    #ring-month .ring-item { font-size: 2vmin; padding-top: 1.2vmin; letter-spacing: 0.3vmin; }
-    #ring-day .ring-item { font-size: 1.8vmin; padding-top: 0.8vmin; letter-spacing: 0.3vmin; }
+    /* الحلقات والعقارب */
+    .ring-wrapper { position: absolute; top: 50%; left: 50%; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+    #ring-date { width: 88vmin; height: 88vmin; }
+    #ring-month { width: 72vmin; height: 72vmin; }
     
-    .ring-item span {
-      white-space: nowrap;
-    }
-
-    /* =========================================
-       Analog Clock Visibility Enhancements
-       ========================================= */
     .analog-clock {
-      position: absolute;
-      top: 50%;
-      left: 50%;
+      position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 32vmin;
-      height: 32vmin;
-      border-radius: 50%;
-      background: #141414;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 0 15px rgba(0,0,0,0.5);
-      z-index: 40;
+      width: 32vmin; height: 32vmin;
+      border-radius: 50%; background: #141414;
+      box-shadow: inset 0 0 20px #000; z-index: 40;
     }
 
-    .hand {
-      position: absolute;
-      bottom: 50%;
-      left: 50%;
-      transform-origin: 50% 100%;
-      border-radius: 5vmin;
-      background: #ffffff;
-      box-shadow: 0 0 12px rgba(255, 255, 255, 0.6); 
-    }
-
-    .hour-hand { width: 1.2vmin; height: 8vmin; margin-left: -0.6vmin; }
-    .minute-hand { width: 0.8vmin; height: 12vmin; margin-left: -0.4vmin; }
-    .second-hand { width: 0.3vmin; height: 14vmin; margin-left: -0.15vmin; }
-
-    .center-dot {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 2.4vmin;
-      height: 2.4vmin;
-      margin: -1.2vmin 0 0 -1.2vmin;
-      background: #ffffff; 
-      border-radius: 50%;
-      border: 0.5vmin solid #ffffff; 
-      box-shadow: 0 0 12px rgba(255, 255, 255, 0.8); 
-      box-sizing: border-box;
-      z-index: 50;
-    }
-
-    .ambient-glow {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 40vmin;
-      height: 40vmin;
+    #ampm-indicator {
+      position: absolute; top: 65%; left: 50%;
       transform: translate(-50%, -50%);
-      background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%);
-      border-radius: 50%;
-      z-index: 1;
-      pointer-events: none;
+      font-size: 2.2vmin; font-weight: bold;
+      color: var(--vanilla-latte); text-shadow: 0 0 10px rgba(243, 229, 171, 0.5);
     }
 
-    /* =========================================
-       Settings UI & Modal 
-       ========================================= */
-    .settings-btn {
-      position: absolute;
-      top: 4vmin;
-      right: 4vmin;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #fff;
-      font-size: 3vmin;
-      width: 7vmin;
-      height: 7vmin;
-      border-radius: 50%;
-      cursor: pointer;
-      z-index: 100;
-      transition: all 0.3s ease;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      outline: none;
-    }
-    .settings-btn:hover {
-      background: rgba(42, 127, 255, 0.2);
-      border-color: #2a7fff;
-      transform: rotate(90deg);
-      box-shadow: 0 0 15px rgba(42, 127, 255, 0.6);
-    }
+    .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: 50% 100%; border-radius: 5vmin; background: #fff; }
+    .hour-hand { width: 1.2vmin; height: 7.5vmin; margin-left: -0.6vmin; }
+    .minute-hand { width: 0.8vmin; height: 11vmin; margin-left: -0.4vmin; }
+    .second-hand { width: 0.3vmin; height: 13vmin; margin-left: -0.15vmin; background: #ff2a2a; }
 
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(8px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 200;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s ease;
-    }
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: all;
+    /* التحكم والمنبه */
+    .controls { position: absolute; bottom: 5vmin; right: 5vmin; z-index: 100; }
+    .btn-circle {
+      width: 12vmin; height: 12vmin; border-radius: 50%;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: white; font-size: 6vmin; cursor: pointer; backdrop-filter: blur(5px);
     }
 
     .modal {
-      background: #151515;
-      border: 1px solid #333;
-      border-radius: 20px;
-      width: 90vw;
-      max-width: 420px;
-      padding: 25px;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 25px rgba(42, 127, 255, 0.15);
-      transform: translateY(30px) scale(0.95);
-      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      display: flex;
-      flex-direction: column;
-      max-height: 85vh;
+      display: none; position: fixed; z-index: 200;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9); justify-content: center; align-items: center;
+      backdrop-filter: blur(10px);
     }
-    .modal-overlay.active .modal {
-      transform: translateY(0) scale(1);
+    .modal-content {
+      background: #1a1a1a; padding: 25px; border-radius: 20px;
+      width: 85%; max-width: 400px; border: 1px solid var(--vanilla-latte);
     }
 
-    .modal-body {
-      overflow-y: auto;
-      padding-right: 15px;
-      flex-grow: 1;
-    }
-    .modal-body::-webkit-scrollbar { width: 6px; }
-    .modal-body::-webkit-scrollbar-track { background: #111; border-radius: 4px; }
-    .modal-body::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-    .modal-body::-webkit-scrollbar-thumb:hover { background: #666; }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #2a2a2a;
-      padding-bottom: 15px;
-      margin-bottom: 20px;
-      flex-shrink: 0;
-    }
-    .modal-header h2 { margin: 0; font-size: 1.5rem; color: #fff; text-shadow: 0 0 8px #2a7fff; }
-    .close-btn { 
-      background: none; border: none; font-size: 2rem; 
-      color: #777; cursor: pointer; transition: color 0.3s; 
-      line-height: 1; margin-top: -5px; padding: 0;
-    }
-    .close-btn:hover { color: #ff2a2a; text-shadow: 0 0 8px #ff2a2a; }
-
-    .setting-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 18px;
-      color: #ddd;
-      font-size: 1.05rem;
-    }
-    .setting-col {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 18px;
-      color: #ddd;
-      font-size: 1.05rem;
-      gap: 10px;
-    }
-    .modal-divider {
-      border: 0;
-      border-top: 1px solid #2a2a2a;
-      margin: 20px 0;
+    input, select {
+      width: 100%; padding: 12px; margin: 10px 0;
+      background: #222; border: 1px solid #444; color: #fff; border-radius: 8px;
     }
 
-    .switch-container { display: flex; align-items: center; }
-    .switch { position: relative; display: inline-block; width: 50px; height: 26px; margin: 0 12px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { 
-      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; 
-      background-color: #333; transition: .4s; border-radius: 34px; border: 1px solid #444;
+    .alarm-list { margin-top: 20px; max-height: 150px; overflow-y: auto; }
+    .alarm-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px; background: #252525; margin-bottom: 8px; border-radius: 8px;
     }
-    .slider:before { 
-      position: absolute; content: ""; height: 18px; width: 18px; 
-      left: 3px; bottom: 3px; background-color: #aaa; transition: .4s; border-radius: 50%; 
-    }
-    input:checked + .slider { background-color: #1a4d1a; border-color: #2aff2a; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
-    input:checked + .slider:before { transform: translateX(24px); background-color: #2aff2a; box-shadow: 0 0 10px #2aff2a; }
 
-    .neon-input {
-      background: #0a0a0a;
-      border: 1px solid #444;
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-family: inherit;
-      outline: none;
-      transition: all 0.3s;
-      color-scheme: dark;
+    /* واجهة الرنين */
+    #ringing-ui {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95); z-index: 300;
+      flex-direction: column; justify-content: center; align-items: center;
     }
-    .neon-input.full-width { width: 100%; box-sizing: border-box; }
-    .neon-input:focus { border-color: #2a7fff; box-shadow: 0 0 10px rgba(42, 127, 255, 0.4); }
-    .neon-input:disabled { opacity: 0.4; cursor: not-allowed; border-color: #222; }
-
-    .color-picker {
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      width: 42px;
-      height: 42px;
-      background-color: transparent;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      transition: transform 0.2s;
+    .ring-btn {
+      width: 80%; max-width: 250px; padding: 20px; margin: 10px;
+      border: none; border-radius: 50px; font-size: 1.2rem; font-weight: bold; cursor: pointer;
     }
-    .color-picker:hover { transform: scale(1.1); }
-    .color-picker::-webkit-color-swatch { border-radius: 50%; border: 3px solid #333; }
-    .color-picker::-moz-color-swatch { border-radius: 50%; border: 3px solid #333; }
-
-    .modal-footer {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 25px;
-      gap: 15px;
-      flex-shrink: 0;
-    }
-    .btn {
-      flex: 1; padding: 12px 0; border: none; border-radius: 10px;
-      font-size: 1.05rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
-    }
-    .btn:active { transform: scale(0.96); }
-    .btn-apply { background: #2a7fff; color: #fff; box-shadow: 0 0 12px rgba(42, 127, 255, 0.5); }
-    .btn-apply:hover { box-shadow: 0 0 20px rgba(42, 127, 255, 0.8); background: #3a8fff; }
-    .btn-reset { background: #1a1a1a; border: 1px solid #ff2a2a; color: #ff2a2a; font-family: inherit; box-shadow: 0 0 8px rgba(255, 42, 42, 0.2); }
-    .btn-reset:hover { background: #ff2a2a; color: #fff; box-shadow: 0 0 15px rgba(255, 42, 42, 0.6); }
-
+    .stop-btn { background: #ff4444; color: white; }
+    .snooze-btn { background: var(--vanilla-latte); color: #333; }
   </style>
 </head>
 <body>
 
-  <button id="settings-btn" class="settings-btn">⚙️</button>
-
-  <div class="modal-overlay" id="modal-overlay">
-    <div class="modal" id="settings-modal">
-      <div class="modal-header">
-        <h2>Settings</h2>
-        <button class="close-btn" id="close-btn">&times;</button>
-      </div>
-      
-      <div class="modal-body">
-        
-        <div class="setting-row">
-          <span>Mode</span>
-          <div class="switch-container">
-            <label class="switch">
-              <input type="checkbox" id="mode-toggle">
-              <span class="slider"></span>
-            </label>
-            <span id="mode-label" style="width: 50px; text-align: right; font-weight: bold; color: #2a7fff;">Auto</span>
-          </div>
-        </div>
-        
-        <div class="setting-row">
-          <span>Date Override</span>
-          <input type="date" id="custom-date" class="neon-input" style="width:140px" disabled>
-        </div>
-        
-        <div class="setting-row">
-          <span>Time Override</span>
-          <input type="time" id="custom-time" class="neon-input" style="width:140px" step="1" disabled>
-        </div>
-
-        <hr class="modal-divider">
-
-        <div class="setting-row">
-          <span>Date Ring Color</span>
-          <input type="color" id="date-color" class="color-picker" value="#ff2a2a">
-        </div>
-        <div class="setting-row">
-          <span>Month Ring Color</span>
-          <input type="color" id="month-color" class="color-picker" value="#ffffff">
-        </div>
-        <div class="setting-row">
-          <span>Day Ring Color</span>
-          <input type="color" id="day-color" class="color-picker" value="#ffffff">
-        </div>
-
-        <hr class="modal-divider">
-
-        <div class="setting-col">
-          <span>Month Names (Comma Separated)</span>
-          <input type="text" id="month-names" class="neon-input full-width" placeholder="JAN, FEB, MAR...">
-        </div>
-        <div class="setting-col">
-          <span>Day Names (Comma Separated)</span>
-          <input type="text" id="day-names" class="neon-input full-width" placeholder="SUN, MON, TUE...">
-        </div>
-        
-      </div>
-      
-      <div class="modal-footer">
-        <button class="btn btn-reset" id="reset-btn">عودة للوقت الحقيقي</button>
-        <button class="btn btn-apply" id="apply-btn">Apply</button>
-      </div>
-    </div>
-  </div>
-
   <div class="clock-container">
-    <div class="ambient-glow"></div>
-
-    <div class="ring-wrapper" id="ring-date">
-      <svg class="progress-ring" viewBox="0 0 100 100">
-        <circle class="track" cx="50" cy="50" r="47"></circle>
-        <circle class="progress" cx="50" cy="50" r="47"></circle>
-      </svg>
-      <div class="items"></div>
-    </div>
-
-    <div class="ring-wrapper" id="ring-month">
-      <svg class="progress-ring" viewBox="0 0 100 100">
-        <circle class="track" cx="50" cy="50" r="47"></circle>
-        <circle class="progress" cx="50" cy="50" r="47"></circle>
-      </svg>
-      <div class="items"></div>
-    </div>
-
-    <div class="ring-wrapper" id="ring-day">
-      <svg class="progress-ring" viewBox="0 0 100 100">
-        <circle class="track" cx="50" cy="50" r="47"></circle>
-        <circle class="progress" cx="50" cy="50" r="47"></circle>
-      </svg>
-      <div class="items"></div>
-    </div>
-
+    <div class="clock-numbers" id="numbers-container"></div>
     <div class="analog-clock">
+      <div id="ampm-indicator">AM</div>
       <div class="hand hour-hand" id="hour"></div>
       <div class="hand minute-hand" id="minute"></div>
       <div class="hand second-hand" id="second"></div>
-      <div class="center-dot" id="center-dot"></div>
     </div>
   </div>
 
+  <div class="controls">
+    <button class="btn-circle" onclick="toggleModal('alarm-modal')">⏰</button>
+  </div>
+
+  <div id="ringing-ui">
+    <h1 style="color:var(--vanilla-latte); font-size: 3rem; margin-bottom: 30px;">⏰ Wake Up!</h1>
+    <button class="ring-btn snooze-btn" onclick="snoozeAlarm()">Snooze (5 Min)</button>
+    <button class="ring-btn stop-btn" onclick="stopAlarm()">Stop</button>
+  </div>
+
+  <div id="alarm-modal" class="modal">
+    <div class="modal-content">
+      <h3 style="color:var(--vanilla-latte)">New Alarm</h3>
+      <input type="time" id="alarm-time">
+      <select id="alarm-sound">
+        <option value="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg">نغمة رقمية</option>
+        <option value="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">تنبيه قصير</option>
+        <option value="my_tone.mp3">نغمتي الخاصة</option>
+        <option value="alarm.mp3">نغمتي الخاصة</option>
+      </select>
+      <button onclick="addAlarm()" style="width:100%; padding:12px; background:var(--vanilla-latte); border:none; color:#333; font-weight:bold; border-radius:8px;">Add Alarm</button>
+      <div class="alarm-list" id="alarm-list"></div>
+      <button onclick="toggleModal('alarm-modal')" style="width:100%; background:none; border:none; color:grey; margin-top:15px;">Close</button>
+    </div>
+  </div>
+
+  <audio id="alarm-audio" loop></audio>
+
   <script>
-    let isCustom = false;
-    let customTime = new Date(); 
+    const audio = document.getElementById('alarm-audio');
+    let alarms = JSON.parse(localStorage.getItem('alarms') || '[]');
+    let currentRingingAlarm = null;
 
-    const DEFAULT_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    const DEFAULT_DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-
-    let dateColor = '#ff2a2a';
-    let monthColor = '#ffffff'; 
-    let dayColor = '#ffffff'; 
-    
-    let monthsArray = [...DEFAULT_MONTHS];
-    let daysArray = [...DEFAULT_DAYS];
-
-    function loadSettings() {
-      const savedCustom = localStorage.getItem('isCustom');
-      const savedTime = localStorage.getItem('customTime');
-      if (savedCustom === 'true' && savedTime) {
-        isCustom = true;
-        customTime = new Date(savedTime);
-      } else {
-        isCustom = false;
-      }
-
-      dateColor = localStorage.getItem('dateColor') || '#ff2a2a';
-      monthColor = localStorage.getItem('monthColor') || '#ffffff';
-      dayColor = localStorage.getItem('dayColor') || '#ffffff';
-
-      const sMonths = localStorage.getItem('monthsArray');
-      if (sMonths) { try { monthsArray = JSON.parse(sMonths); } catch(e){} }
-      
-      const sDays = localStorage.getItem('daysArray');
-      if (sDays) { try { daysArray = JSON.parse(sDays); } catch(e){} }
+    // رسم الأرقام
+    const numbersContainer = document.getElementById('numbers-container');
+    for (let i = 1; i <= 12; i++) {
+      const num = document.createElement('div');
+      num.className = 'hour-num';
+      num.innerText = i;
+      num.style.transform = `rotate(${i * 30}deg)`;
+      numbersContainer.appendChild(num);
     }
 
-    function saveSettings() {
-      localStorage.setItem('isCustom', isCustom);
-      localStorage.setItem('customTime', customTime.toISOString());
-      
-      localStorage.setItem('dateColor', dateColor);
-      localStorage.setItem('monthColor', monthColor);
-      localStorage.setItem('dayColor', dayColor);
-      
-      localStorage.setItem('monthsArray', JSON.stringify(monthsArray));
-      localStorage.setItem('daysArray', JSON.stringify(daysArray));
+    function toggleModal(id) {
+      const m = document.getElementById(id);
+      m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+      renderAlarms();
     }
 
-    loadSettings();
-
-    const modalOverlay = document.getElementById('modal-overlay');
-    const settingsBtn = document.getElementById('settings-btn');
-    const closeBtn = document.getElementById('close-btn');
-    
-    const modeToggle = document.getElementById('mode-toggle');
-    const modeLabel = document.getElementById('mode-label');
-    const dateInput = document.getElementById('custom-date');
-    const timeInput = document.getElementById('custom-time');
-    
-    const dateColorInput = document.getElementById('date-color');
-    const monthColorInput = document.getElementById('month-color');
-    const dayColorInput = document.getElementById('day-color');
-    
-    const monthNamesInput = document.getElementById('month-names');
-    const dayNamesInput = document.getElementById('day-names');
-
-    const applyBtn = document.getElementById('apply-btn');
-    const resetBtn = document.getElementById('reset-btn');
-
-    dateColorInput.value = dateColor;
-    monthColorInput.value = monthColor;
-    dayColorInput.value = dayColor;
-    monthNamesInput.value = monthsArray.join(', ');
-    dayNamesInput.value = daysArray.join(', ');
-
-    settingsBtn.addEventListener('click', () => {
-      const currentViewTime = isCustom ? customTime : new Date();
-      
-      const yyyy = currentViewTime.getFullYear();
-      const mm = String(currentViewTime.getMonth() + 1).padStart(2, '0');
-      const dd = String(currentViewTime.getDate()).padStart(2, '0');
-      dateInput.value = `${yyyy}-${mm}-${dd}`;
-      
-      const hh = String(currentViewTime.getHours()).padStart(2, '0');
-      const min = String(currentViewTime.getMinutes()).padStart(2, '0');
-      const ss = String(currentViewTime.getSeconds()).padStart(2, '0');
-      timeInput.value = `${hh}:${min}:${ss}`;
-
-      modeToggle.checked = isCustom;
-      toggleInputStates(isCustom);
-      
-      modalOverlay.classList.add('active');
-    });
-
-    closeBtn.addEventListener('click', () => { modalOverlay.classList.remove('active'); });
-    modeToggle.addEventListener('change', (e) => { toggleInputStates(e.target.checked); });
-
-    function toggleInputStates(isManual) {
-      modeLabel.textContent = isManual ? 'Manual' : 'Auto';
-      modeLabel.style.color = isManual ? '#2aff2a' : '#2a7fff';
-      dateInput.disabled = !isManual;
-      timeInput.disabled = !isManual;
+    function addAlarm() {
+      const time = document.getElementById('alarm-time').value;
+      const sound = document.getElementById('alarm-sound').value;
+      if (!time) return;
+      alarms.push({ id: Date.now(), time, sound, active: true });
+      localStorage.setItem('alarms', JSON.stringify(alarms));
+      renderAlarms();
     }
 
-    dateColorInput.addEventListener('input', (e) => { dateColor = e.target.value; updateTime(); });
-    monthColorInput.addEventListener('input', (e) => { monthColor = e.target.value; updateTime(); });
-    dayColorInput.addEventListener('input', (e) => { dayColor = e.target.value; updateTime(); });
+    function renderAlarms() {
+      const list = document.getElementById('alarm-list');
+      list.innerHTML = alarms.map(a => `
+        <div class="alarm-item">
+          <span>${a.time}</span>
+          <button onclick="deleteAlarm(${a.id})" style="color:#ff4444; background:none; border:none;">Delete</button>
+        </div>
+      `).join('');
+    }
 
-    applyBtn.addEventListener('click', () => {
-      const isManual = modeToggle.checked;
-      if (isManual) {
-        const dVal = dateInput.value;
-        const tVal = timeInput.value;
-        if (dVal && tVal) {
-          const parts = tVal.split(':');
-          const hr = parseInt(parts[0], 10) || 0;
-          const mn = parseInt(parts[1], 10) || 0;
-          const sc = parseInt(parts[2], 10) || 0;
-          const newDate = new Date(dVal);
-          newDate.setHours(hr, mn, sc, 0);
-          customTime = newDate;
-          isCustom = true;
-        }
-      } else {
-        isCustom = false;
-      }
+    function deleteAlarm(id) {
+      alarms = alarms.filter(a => a.id !== id);
+      localStorage.setItem('alarms', JSON.stringify(alarms));
+      renderAlarms();
+    }
 
-      if (monthNamesInput.value.trim()) {
-        const parsedM = monthNamesInput.value.split(',').map(s => s.trim()).filter(Boolean);
-        monthsArray = Array.from({length: 12}, (_, i) => parsedM[i] || DEFAULT_MONTHS[i]);
-        monthNamesInput.value = monthsArray.join(', '); 
-      }
+    function checkAlarms() {
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
       
-      if (dayNamesInput.value.trim()) {
-        const parsedD = dayNamesInput.value.split(',').map(s => s.trim()).filter(Boolean);
-        daysArray = Array.from({length: 7}, (_, i) => parsedD[i] || DEFAULT_DAYS[i]);
-        dayNamesInput.value = daysArray.join(', ');
-      }
-      
-      saveSettings();
-      updateTime(); 
-      modalOverlay.classList.remove('active');
-    });
-
-    resetBtn.addEventListener('click', () => {
-      isCustom = false;
-      saveSettings();
-      updateTime();
-      modalOverlay.classList.remove('active');
-    });
-
-    function setRing(id, items, currentIndex, accentColor) {
-      const wrapper = document.getElementById(id);
-      const itemsContainer = wrapper.querySelector('.items');
-      const svgCircle = wrapper.querySelector('.progress');
-      
-      let needsRebuild = itemsContainer.children.length !== items.length;
-      if (!needsRebuild) {
-        for(let j=0; j<items.length; j++) {
-           let existingText = itemsContainer.children[j].querySelector('span').textContent;
-           if (existingText !== items[j]) { needsRebuild = true; break; }
-        }
-      }
-
-      if (needsRebuild) {
-        itemsContainer.innerHTML = '';
-        items.forEach((item, i) => {
-          const el = document.createElement('div');
-          el.className = 'ring-item';
-          const innerSpan = document.createElement('span');
-          innerSpan.textContent = item;
-          el.appendChild(innerSpan);
-          const angle = i * (360 / items.length);
-          el.style.transform = `rotate(${angle}deg)`;
-          itemsContainer.appendChild(el);
-        });
-      }
-      
-      Array.from(itemsContainer.children).forEach((el, i) => {
-        el.style.color = '#ffffff'; 
-
-        if (i === currentIndex) {
-          el.style.textShadow = `0 0 12px ${accentColor}`;
-          el.style.opacity = '1';
-        } else {
-          el.style.textShadow = 'none';
-          el.style.opacity = '0.5'; 
+      alarms.forEach(alarm => {
+        if (alarm.active && alarm.time === currentTime) {
+          triggerAlarm(alarm);
         }
       });
-      
-      const angle = currentIndex * (360 / items.length);
-      wrapper.style.transform = `translate(-50%, -50%) rotate(-${angle}deg)`;
-      svgCircle.style.stroke = accentColor;
     }
 
-    function updateTime() {
-      const now = isCustom ? customTime : new Date();
-      
-      const year = now.getFullYear();
-      const month = now.getMonth(); 
-      const date = now.getDate(); 
-      const day = now.getDay(); 
-      
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const datesArray = Array.from({length: daysInMonth}, (_, i) => String(i+1).padStart(2, '0'));
-      
-      setRing('ring-date', datesArray, date - 1, dateColor);
-      setRing('ring-month', monthsArray, month, monthColor);
-      setRing('ring-day', daysArray, day, dayColor);
+    function triggerAlarm(alarm) {
+      currentRingingAlarm = alarm;
+      alarm.active = false; 
+      audio.src = alarm.sound;
+      audio.play();
+      document.getElementById('ringing-ui').style.display = 'flex';
     }
 
-    function updateSmoothTime() {
-      const realNow = new Date();
-      const now = isCustom ? customTime : realNow;
-      const ms = realNow.getMilliseconds();
+    function stopAlarm() {
+      audio.pause();
+      document.getElementById('ringing-ui').style.display = 'none';
+      localStorage.setItem('alarms', JSON.stringify(alarms));
+    }
+
+    function snoozeAlarm() {
+      audio.pause();
+      document.getElementById('ringing-ui').style.display = 'none';
       
-      const s = now.getSeconds() + ms / 1000;
-      const m = now.getMinutes() + s / 60;
-      const h = (now.getHours() % 12) + m / 60;
+      // إضافة 5 دقائق للوقت الحالي
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 5);
+      const snoozeTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
       
-      document.getElementById('hour').style.transform = `rotate(${h * 30}deg)`;
+      alarms.push({ id: Date.now(), time: snoozeTime, sound: currentRingingAlarm.sound, active: true });
+      localStorage.setItem('alarms', JSON.stringify(alarms));
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const s = now.getSeconds();
+      document.getElementById('ampm-indicator').innerText = h >= 12 ? 'PM' : 'AM';
+      document.getElementById('hour').style.transform = `rotate(${(h % 12) * 30 + m/2}deg)`;
       document.getElementById('minute').style.transform = `rotate(${m * 6}deg)`;
       document.getElementById('second').style.transform = `rotate(${s * 6}deg)`;
-      
-      requestAnimationFrame(updateSmoothTime);
+      checkAlarms();
     }
 
-    updateTime();
-    requestAnimationFrame(updateSmoothTime);
-
-    setInterval(() => {
-      if (isCustom) {
-        customTime.setSeconds(customTime.getSeconds() + 1);
-        saveSettings(); 
-      }
-      updateTime();
-    }, 1000);
-
+    setInterval(updateClock, 1000);
+    updateClock();
   </script>
 </body>
 </html>
