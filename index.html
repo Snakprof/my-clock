@@ -231,17 +231,39 @@
     }
 
     function startAlarm() {
-      const audio = document.getElementById('audio');
-      audio.src = config.sound;
-      audio.play().catch(() => console.log("Interaction needed"));
-      document.getElementById('alarm-popup').style.display = 'block';
-    }
+  const audio = document.getElementById('audio');
+  audio.src = config.sound;
+  audio.volume = 1;
 
-    window.stopAlarm = () => {
-      const audio = document.getElementById('audio');
-      audio.pause(); audio.currentTime = 0;
-      document.getElementById('alarm-popup').style.display = 'none';
-    };
+  audio.play().catch(() => console.log("User interaction needed"));
+
+  // إظهار البوب أب
+  document.getElementById('alarm-popup').style.display = 'block';
+
+  // تشغيل الاهتزاز (لو متوفر)
+  if (navigator.vibrate) {
+    navigator.vibrate([500, 300, 500, 300, 500]); // يهتز 3 مرات
+  }
+}
+
+    window.snoozeAlarm = () => {
+  stopAlarm();
+
+  const snooze = new Date(Date.now() + 5 * 60000);
+  const offset = snooze.getTimezoneOffset() * 60000;
+  const timeStr = new Date(snooze.getTime() - offset).toISOString().slice(0,16);
+
+  config.alarms.push({ 
+    id: Date.now(), 
+    time: timeStr, 
+    active: true 
+  });
+
+  localStorage.setItem('alrms', JSON.stringify(config.alarms));
+
+  // اهتزاز بسيط للتأكيد
+  if (navigator.vibrate) navigator.vibrate(200);
+};
 
     window.snoozeAlarm = () => {
       stopAlarm();
@@ -251,7 +273,15 @@
       config.alarms.push({ id: Date.now(), time: timeStr, active: true });
       localStorage.setItem('alrms', JSON.stringify(config.alarms));
     };
-
+document.addEventListener("click", function enableAudio() {
+  const a = document.getElementById("audio");
+  a.volume = 0.01;
+  a.play().then(() => {
+    a.pause();
+    a.currentTime = 0;
+    document.removeEventListener("click", enableAudio);
+  });
+});
     setInterval(update, 1000);
     update();
   </script>
